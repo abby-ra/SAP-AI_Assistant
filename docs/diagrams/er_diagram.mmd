@@ -1,0 +1,20 @@
+erDiagram
+    USER {
+        string user_id
+        string name
+        string role
+    }
+    QUERY {
+        string query_id
+        string user_id
+        string question
+        string created_at
+    }
+    INSIGHT {
+        string insight_id
+        string query_id
+        string response
+        string created_at
+    }
+    USER ||--o{ QUERY : submits
+    QUERY ||--o{ INSIGHT : generates

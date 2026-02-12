@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SAP Enterprise AI Assistant</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <h1>SAP Enterprise AI Assistant</h1>
+      <p>Decision support dashboard for enterprise stakeholders.</p>
+    </header>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>AI Insight</h2>
+        <span class="status">Idle</span>
+      </div>
+      <div class="panel-body">
+        <p class="placeholder">Submit a query to generate AI recommendations.</p>
+        <div class="loading" hidden>
+          <div class="spinner"></div>
+          <span>Processing...</span>
+        </div>
+        <div class="result" hidden></div>
+      </div>
+      <div class="panel-footer">
+        <input type="text" id="queryInput" placeholder="Enter a business question" />
+        <button id="runBtn">Run Analysis</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
