@@ -1,38 +1,203 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>SAP Enterprise AI Assistant</title>
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
+
 <body>
-  <main class="shell">
+  <!-- Landing Page -->
+  <section id="landing-view" class="landing-container">
+    <nav class="landing-nav">
+      <div class="nav-brand">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" class="brand-svg">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <span class="brand-name">SAP AI Assistant</span>
+      </div>
+      <div class="nav-links">
+        <a href="#" class="nav-link">Home</a>
+        <a href="#" class="nav-link">About</a>
+        <button id="navLoginBtn" class="nav-btn">Login</button>
+        <button class="theme-toggle">☀️</button>
+      </div>
+    </nav>
+
+    <div class="landing-hero">
+      <p class="hero-pretitle">Welcome to</p>
+      <h1 class="hero-title">SAP AI Assistant</h1>
+      <p class="hero-subtitle">
+        Your intelligent platform for enterprise decision support <br>
+        and collaborative analytics. Start your journey today.
+      </p>
+      <button id="getStartedBtn" class="cta-btn">
+        Get Started <span class="arrow">→</span>
+      </button>
+
+      <div class="hero-illustration">
+        <!-- Abstract UI representation -->
+        <div class="illustration-card"></div>
+        <div class="illustration-circle"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Login Modal (Hidden by default) -->
+  <div id="login-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <button class="modal-close">&times;</button>
+      <!-- Step 1: Selection View -->
+      <div id="login-selection">
+        <div class="login-header">
+          <h2>Choose Login Type</h2>
+          <p>Please select your portal to continue</p>
+        </div>
+
+        <div class="role-grid">
+          <button class="role-card big-card" onclick="selectLoginType('business')">
+            <div class="role-icon big-icon">💼</div>
+            <h3>Business Login</h3>
+            <p>Access for Managers & Directors</p>
+            <span class="card-link">Login →</span>
+          </button>
+
+          <button class="role-card big-card" onclick="selectLoginType('user')">
+            <div class="role-icon big-icon">🛡️</div>
+            <h3>User Login</h3>
+            <p>Access for Analysts & Employees</p>
+            <span class="card-link">Login →</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: Form View -->
+      <div id="login-form-view" style="display: none;">
+        <button class="back-link" onclick="showSelectionView()">← Back to Selection</button>
+
+        <div class="login-header">
+          <h2 id="formTitle">Login</h2>
+          <p>Enter your credentials</p>
+        </div>
+
+        <form id="loginForm" onsubmit="handleLoginSubmit(event)">
+          <input type="hidden" id="loginType" value="">
+
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" placeholder="name@sap.com" required>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" placeholder="Enter password" required>
+          </div>
+
+          <div id="loginError" class="error-message" style="display:none; color: #ff6b6b; margin-bottom: 1rem;"></div>
+
+          <button type="submit" class="cta-btn full-width">Login</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <main class="shell" id="main-app" style="display: none;">
     <header class="hero">
       <h1>SAP Enterprise AI Assistant</h1>
-      <p>Decision support dashboard for enterprise stakeholders.</p>
+      <p>Collaborative decision support for enterprise stakeholders</p>
+      <div class="user-info">
+        <span id="userRole" class="badge">Role</span>
+        <button id="logoutBtn" class="logout-btn">Logout</button>
+      </div>
     </header>
 
-    <section class="panel">
-      <div class="panel-header">
-        <h2>AI Insight</h2>
-        <span class="status">Idle</span>
-      </div>
-      <div class="panel-body">
-        <p class="placeholder">Submit a query to generate AI recommendations.</p>
-        <div class="loading" hidden>
-          <div class="spinner"></div>
-          <span>Processing...</span>
+    <!-- Navigation -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-view="new">New Analysis</button>
+      <button class="nav-tab" data-view="conversations">Conversations</button>
+      <button class="nav-tab" data-view="discussion" style="display:none">Discussion</button>
+    </nav>
+
+    <!-- View: New Analysis -->
+    <section id="view-new" class="view-section">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>AI Insight</h2>
+          <span class="status">Idle</span>
         </div>
-        <div class="result" hidden></div>
+        <div class="panel-body">
+          <p class="placeholder">Submit a query to generate AI recommendations.</p>
+
+          <div class="result" hidden></div>
+        </div>
+        <div class="panel-footer">
+          <input type="text" id="conversationTitle" placeholder="Conversation title (optional)" />
+          <select id="visibilitySelect">
+            <option value="department">Department</option>
+            <option value="public">Public</option>
+            <option value="private">Private</option>
+          </select>
+          <input type="text" id="queryInput" placeholder="Enter a business question" />
+          <button id="runBtn">Run Analysis</button>
+        </div>
       </div>
-      <div class="panel-footer">
-        <input type="text" id="queryInput" placeholder="Enter a business question" />
-        <button id="runBtn">Run Analysis</button>
+    </section>
+
+    <!-- View: Conversations List -->
+    <section id="view-conversations" class="view-section" style="display:none">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Shared Conversations</h2>
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-filter="all">All</button>
+            <button class="filter-tab" data-filter="my">My Conversations</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="conversationsList" class="conversations-list">
+            <p class="placeholder">Loading conversations...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- View: Conversation Discussion -->
+    <section id="view-discussion" class="view-section" style="display:none">
+      <div class="panel">
+        <div class="panel-header">
+          <button id="backBtn" class="back-btn">← Back</button>
+          <div class="conversation-header">
+            <h2 id="discussionTitle">Conversation</h2>
+            <div class="conversation-meta">
+              <span id="discussionCreator"></span>
+              <span id="discussionDate"></span>
+              <span id="discussionVisibility" class="visibility-badge"></span>
+            </div>
+          </div>
+          <div class="reactions-bar" id="reactionsBar"></div>
+        </div>
+        <div class="panel-body">
+          <div id="discussionContent" class="discussion-content"></div>
+
+          <div class="comments-section">
+            <h3>Team Input & Suggestions</h3>
+            <div id="commentsList" class="comments-list"></div>
+            <div class="comment-form">
+              <textarea id="commentInput" placeholder="Share your thoughts, suggestions, or expertise..."></textarea>
+              <button id="addCommentBtn">Add Comment</button>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   </main>
 
   <script src="/static/app.js"></script>
 </body>
+
 </html>

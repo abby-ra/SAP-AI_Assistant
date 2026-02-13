@@ -115,6 +115,18 @@ uvicorn backend.app:app --reload --host 0.0.0.0 --port 8000
 
 ---
 
+## 👥 Collaborative Features (New!)
+
+1. **Login**: Use the **Login** button to access the platform.
+   - **Business Login**: `alice@sap.com` / `password123` (Manager)
+   - **User Login**: `charlie@sap.com` / `password123` (Analyst)
+
+2. **Team Feed**: Click the **Conversations** tab to see analysis sessions shared by your team.
+
+3. **Discussion**: Click any conversation card to view the insight and **add comments** to collaborate with your team.
+
+---
+
 ## 🔧 Configuration Options
 
 ### Environment Variables (.env)

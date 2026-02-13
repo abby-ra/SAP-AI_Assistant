@@ -3,9 +3,21 @@ erDiagram
         string user_id
         string name
         string role
+        string department
+        string email
+    }
+    CONVERSATION {
+        string conversation_id
+        string user_id
+        string title
+        string visibility
+        string status
+        string created_at
+        string updated_at
     }
     QUERY {
         string query_id
+        string conversation_id
         string user_id
         string question
         string created_at
@@ -16,5 +28,33 @@ erDiagram
         string response
         string created_at
     }
+    COMMENT {
+        string comment_id
+        string conversation_id
+        string user_id
+        string content
+        string created_at
+    }
+    REACTION {
+        string reaction_id
+        string conversation_id
+        string user_id
+        string reaction_type
+        string created_at
+    }
+    SHARE {
+        string share_id
+        string conversation_id
+        string shared_with_user_id
+        string permission_level
+        string created_at
+    }
+    USER ||--o{ CONVERSATION : creates
     USER ||--o{ QUERY : submits
+    USER ||--o{ COMMENT : posts
+    USER ||--o{ REACTION : gives
+    CONVERSATION ||--o{ QUERY : contains
+    CONVERSATION ||--o{ COMMENT : receives
+    CONVERSATION ||--o{ REACTION : receives
+    CONVERSATION ||--o{ SHARE : shared_via
     QUERY ||--o{ INSIGHT : generates

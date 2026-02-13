@@ -1,5 +1,14 @@
 from backend.config import settings
 import os
+try:
+    import openai
+except ImportError:
+    openai = None
+
+try:
+    import anthropic
+except ImportError:
+    anthropic = None
 
 
 def run_model_test() -> dict:
@@ -16,11 +25,18 @@ def run_model_test() -> dict:
 
 
 def analyze_business_query(query: str) -> dict:
-    """Analyze a business query using AI or mock responses"""
+    """Analyze a business query using ML-enhanced AI or mock responses"""
+    
+    # Import ML service
+    from backend.services.ml_service import get_ml_service
+    
+    # Get ML insights first
+    ml_service = get_ml_service()
+    ml_insights = ml_service.generate_ml_insights(query)
     
     # Check if real API key is configured
     if not settings.model_api_key or settings.model_api_key == "test_api_key_placeholder":
-        return _mock_ai_analysis(query)
+        return _mock_ai_analysis_with_ml(query, ml_insights)
     
     # Try real AI integration
     try:
@@ -30,7 +46,8 @@ def analyze_business_query(query: str) -> dict:
             "status": "error",
             "analysis": f"AI Error: {str(e)}\n\nFalling back to mock mode.",
             "query": query,
-            "mock_mode": True
+            "mock_mode": True,
+            "ml_insights": ml_insights
         }
 
 
@@ -38,30 +55,29 @@ def _call_ai_api(query: str) -> dict:
     """Call real AI API (OpenAI/Anthropic/etc)"""
     try:
         # Try OpenAI first
-        import openai
-        openai.api_key = settings.model_api_key
+        if openai:
+            openai.api_key = settings.model_api_key
+            
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are an SAP Enterprise AI Assistant. Provide concise, actionable business insights for enterprise stakeholders. Focus on data-driven recommendations."},
+                    {"role": "user", "content": query}
+                ],
+                max_tokens=500,
+                temperature=0.7
+            )
+            
+            return {
+                "status": "success",
+                "analysis": response.choices[0].message.content,
+                "query": query,
+                "model": "gpt-3.5-turbo",
+                "mock_mode": False
+            }
         
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are an SAP Enterprise AI Assistant. Provide concise, actionable business insights for enterprise stakeholders. Focus on data-driven recommendations."},
-                {"role": "user", "content": query}
-            ],
-            max_tokens=500,
-            temperature=0.7
-        )
-        
-        return {
-            "status": "success",
-            "analysis": response.choices[0].message.content,
-            "query": query,
-            "model": "gpt-3.5-turbo",
-            "mock_mode": False
-        }
-    except ImportError:
-        # OpenAI not installed, try anthropic
-        try:
-            import anthropic
+        # Try anthropic
+        if anthropic:
             client = anthropic.Anthropic(api_key=settings.model_api_key)
             
             message = client.messages.create(
@@ -79,8 +95,216 @@ def _call_ai_api(query: str) -> dict:
                 "model": "claude-3-haiku",
                 "mock_mode": False
             }
-        except ImportError:
-            raise Exception("No AI library installed. Run: pip install openai anthropic")
+            
+        raise Exception("No AI library installed. Run: pip install openai anthropic")
+    except Exception as e:
+        # Re-raise to be caught by the caller who handles the fallback
+        raise e
+
+
+def _mock_ai_analysis_with_ml(query: str, ml_insights: dict) -> dict:
+    """Generate ML+LLM-enhanced responses based on query analysis"""
+    query_lower = query.lower()
+    category = ml_insights['category']
+    impact = ml_insights['impact_metrics']
+    recommendations = ml_insights['recommendations']
+    
+    # TEMPORARILY DISABLED: LLM takes too long on first load
+    # Try to use LLM for dynamic text generation
+    llm_analysis = None
+    # try:
+    #     from backend.services.llm_service import get_llm_service
+    #     llm_service = get_llm_service()
+    #     llm_analysis = llm_service.generate_analysis(query, category, ml_insights)
+    # except Exception as e:
+    #     print(f"LLM generation failed, using template: {e}")
+    #     llm_analysis = None
+    
+    # Build ML-enhanced header
+    ml_header = f"""🤖 **AI-Powered Analysis** (ML-Enhanced)
+
+📊 **Category**: {category.replace('_', ' ').title()}
+🎯 **Priority**: {impact['priority']}
+💼 **Business Impact Score**: {impact['impact_score']}/1.0
+🔍 **ML Confidence**: {ml_insights['confidence']}
+
+---
+
+"""
+
+    
+    # Use LLM-generated analysis if available, otherwise use template
+    if llm_analysis:
+        analysis_body = f"""🧠 **AI-Generated Insights**:
+
+{llm_analysis}
+
+📋 **Structured Analysis**:
+
+{_get_category_analysis(query_lower, category)}"""
+    else:
+        # Fallback to template-based analysis
+        analysis_body = _get_category_analysis(query_lower, category)
+    
+    # Build recommendations section
+    rec_section = "\n\n💡 **ML-Driven Recommendations**:\n"
+    for i, rec in enumerate(recommendations, 1):
+        rec_section += f"{i}. {rec}\n"
+    
+    # Combine all sections
+    full_analysis = ml_header + analysis_body + rec_section
+    
+    # Add footer based on whether LLM was used
+    if llm_analysis:
+        full_analysis += "\n\n🔬 *Powered by scikit-learn ML + DistilGPT-2 LLM*"
+    else:
+        full_analysis += "\n\n🔬 *Powered by scikit-learn ML models*"
+    
+    return {
+        "status": "success",
+        "analysis": full_analysis,
+        "query": query,
+        "model": "ml+llm" if llm_analysis else ml_insights['ml_model'],
+        "mock_mode": True,
+        "ml_insights": ml_insights,
+        "llm_used": bool(llm_analysis)
+    }
+
+
+
+def _get_category_analysis(query_lower: str, category: str) -> str:
+    """Get detailed analysis based on ML category"""
+    
+    # Stock/Inventory related
+    if category == 'stock_inventory':
+        return """📦 **Stock & Inventory Analysis**:
+
+✓ Current Status: Inventory levels show a 15% reduction compared to last quarter.
+
+🔍 Key Insights:
+• High-demand items (SKU-2891, SKU-3047) are below reorder point
+• Seasonal products show expected decline patterns
+• Supply chain delays affecting 3 product categories
+
+📈 Projected Impact: Restocking within 2 weeks will prevent 8% revenue loss."""
+    
+    # Sales/Revenue related
+    elif category == 'sales_revenue':
+        return """💰 **Sales Performance Analysis**:
+
+✓ Q4 Revenue: $12.4M (↑ 8.3% YoY)
+✓ Profit Margin: 23.5% (↑ 2.1%)
+
+🎯 Top Performers:
+• Enterprise Solutions: $5.2M (+15%)
+• Cloud Services: $4.1M (+22%)
+• Consulting: $3.1M (+3%)
+
+⚠️ Areas of Concern:
+• Customer churn rate increased to 12%
+• Average deal size decreased by $15K
+
+📊 Forecast: Q1 2026 projected at $13.8M with current initiatives."""
+    
+    # KPI/Performance related
+    elif category == 'kpi_metrics':
+        return """📈 **Key Performance Indicators Dashboard**:
+
+🎯 Strategic KPIs:
+• Customer Satisfaction: 87% (Target: 90%)
+• Net Promoter Score: 62 (Industry Avg: 58)
+• Employee Productivity: 94% (↑ 3%)
+• System Uptime: 99.7% (Target: 99.5%)
+
+💼 Operational Metrics:
+• Order Fulfillment Rate: 96.2%
+• Average Response Time: 4.2 hours
+• First Contact Resolution: 78%
+
+✓ Overall Health Score: 8.4/10 - Strong performance with room for optimization."""
+    
+    # Customer/Client related
+    elif category == 'customer_analysis':
+        return """👥 **Customer Insights Analysis**:
+
+📊 Customer Base Overview:
+• Total Active Customers: 1,847
+• New Acquisitions (Last 30 days): 142
+• Churn Rate: 3.2% (Industry: 5.1%)
+• Lifetime Value (Avg): $124,500
+
+🌟 Segment Performance:
+• Enterprise (500+ employees): 412 customers, 68% of revenue
+• Mid-Market (100-500): 789 customers, 24% of revenue
+• Small Business: 646 customers, 8% of revenue
+
+⚠️ At-Risk Customers: 67 accounts showing reduced engagement
+
+🎯 Goal: Reduce churn to 2.5% through targeted interventions."""
+    
+    # Cost/Budget related
+    elif category == 'cost_budget':
+        return """💵 **Cost Analysis & Budget Optimization**:
+
+📉 Current Spending Overview:
+• Total OpEx: $3.2M/month
+• Year-over-Year Change: +12%
+• Budget Utilization: 87%
+
+🔍 Cost Breakdown:
+• Personnel: $1.8M (56%)
+• Technology/Infrastructure: $0.8M (25%)
+• Marketing: $0.4M (13%)
+• Operations: $0.2M (6%)
+
+⚠️ Cost Overruns:
+• Cloud infrastructure: +18% (unplanned scaling)
+• Third-party tools: +9% (license creep)
+
+💰 Projected Savings: $240K annually with recommended changes."""
+    
+    # Risk/Compliance related
+    elif category == 'risk_compliance':
+        return """🛡️ **Risk & Compliance Assessment**:
+
+✓ Compliance Status:
+• GDPR: Fully Compliant ✓
+• SOC 2: Certified (renewal due Q2 2026)
+• ISO 27001: In Progress (85% complete)
+• Industry Regulations: Compliant ✓
+
+⚠️ Risk Exposure:
+• Cybersecurity: Medium Risk (2 vulnerabilities pending patch)
+• Data Privacy: Low Risk
+• Operational: Low Risk
+• Financial: Low Risk
+
+🔐 Security Posture:
+• Recent Incidents: 0 (last 90 days)
+• Security Training: 94% staff completion
+• Penetration Test: Passed (Jan 2026)
+
+🎯 Overall Risk Score: Low - Well-managed with proactive monitoring."""
+    
+    # Default general business query
+    else:
+        return f"""🔍 **Business Analysis**:
+
+📝 Query: "{query_lower}"
+
+Based on ML analysis and enterprise data:
+
+✓ Your query requires:
+• Data-driven decision making
+• Cross-functional collaboration
+• Performance monitoring
+• Resource optimization
+
+📊 Next Steps:
+• Define specific success metrics
+• Set quarterly review checkpoints
+• Allocate resources appropriately
+• Establish accountability framework"""
 
 
 def _mock_ai_analysis(query: str) -> dict:
